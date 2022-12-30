@@ -4,7 +4,14 @@ import "../utils/owned.sol";
 
 pragma solidity >=0.7.0 <0.9.0;
 
-contract AuctionNoWithdraw is Owned{
+
+/**Contract safe to reentrancy but UNSAFE to state lock
+
+if bidder is a smart contract that doesn't allow send funds
+(if it doesn't implements receive and fallback or if it does so, they are not payable)
+
+placeBid function will fail and nobody can bid again */
+contract AuctionUnsafe is Owned{
 
     address public highestBidder;
     uint public highestBid; //If 0, owner claimed the price
@@ -32,7 +39,7 @@ contract AuctionNoWithdraw is Owned{
         //Return previous bid
         uint amount = highestBid;
         highestBid = 0; //set to 0 to avoid doble spending by reentrancy
-        (bool success,) = highestBidder.call{value: amount}("");
+        (bool success,) = highestBidder.call{value: amount}("");//UNSAFE, if fails, contract locks
         require(success, "Error sending back funds");
         
         //Store new bid

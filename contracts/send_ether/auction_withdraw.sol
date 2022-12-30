@@ -4,6 +4,9 @@ import "../utils/owned.sol";
 
 pragma solidity >=0.7.0 <0.9.0;
 
+//SAFE CONTRACT
+//IMPLEMENTS PATTERN CHECK, EFFECTS, INTERACT to avoid reentrancy
+//IMPLEMENTS PATTERN WITHDRAW to avoid reentrancy and state lock of contract
 contract AuctionWithdraw is Owned{
 
     address public highestBidder;
@@ -52,6 +55,7 @@ contract AuctionWithdraw is Owned{
         highestBid = 0;
     }
 
+    //IMPLEMENTS PATTERN CHECK, EFFECTS, INTERACT
     function withdrawBids() public{
         //1: checks
         require( balances[msg.sender] > 0 , "Sender has no balance left to withdraw");
