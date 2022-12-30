@@ -7,9 +7,9 @@ pragma solidity >=0.7.0 <0.9.0;
 contract AuctionWithdraw is Owned{
 
     address public highestBidder;
-    uint public highestBid; //If 0, auction finished
+    uint public highestBid; //If 0, owner claimed the price
 
-    uint public timestampAuctionCloses; //when auction finish
+    uint public timestampAuctionCloses;
 
     //withdraw allowances
     mapping(address => uint) public balances;
@@ -20,6 +20,7 @@ contract AuctionWithdraw is Owned{
         
         timestampAuctionCloses = _timestampAuctionCloses;
 
+        //initial price set by msg.value
         highestBidder = msg.sender;
         highestBid = msg.value;
     }
@@ -42,7 +43,7 @@ contract AuctionWithdraw is Owned{
 
 
     //If auction ended, allow owner to claim highest bid
-    function auctionEnded() public onlyOwner{
+    function claimHighestBid() public onlyOwner{
         require(timestampAuctionCloses > block.timestamp, "Auction not closed yet");
         require(highestBid > 0, "Already got funds");
 
@@ -52,20 +53,16 @@ contract AuctionWithdraw is Owned{
     }
 
     function withdrawBids() public{
+        //1: checks
         require( balances[msg.sender] > 0 , "Sender has no balance left to withdraw");
 
+        //2: effects
         uint amount = balances[msg.sender];
         balances[msg.sender] = 0;
+        
+        //3: interactions
         (bool success,) = msg.sender.call{value: amount}("");
         require(success, "Error sending funds");
     }
-
-    function getWinner() public view returns(address){
-        if(timestampAuctionCloses > block.timestamp){
-            return highestBidder;
-        }
-        return address(bytes20(0));
-    }
-
 
 }

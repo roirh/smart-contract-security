@@ -7,15 +7,16 @@ pragma solidity >=0.7.0 <0.9.0;
 contract AuctionNoWithdraw is Owned{
 
     address public highestBidder;
-    uint public highestBid; //If 0, auction finished
+    uint public highestBid; //If 0, owner claimed the price
 
-    uint public timestampAuctionCloses; //when auction finish
+    uint public timestampAuctionCloses;
 
     constructor(uint _timestampAuctionCloses) payable{
         require( _timestampAuctionCloses > block.timestamp , "Auction should finish in the future");
         
         timestampAuctionCloses = _timestampAuctionCloses;
 
+        //initial price set by msg.value
         highestBidder = msg.sender;
         highestBid = msg.value;
     }
@@ -41,24 +42,16 @@ contract AuctionNoWithdraw is Owned{
 
 
     //If auction ended, allow owner to claim highest bid
-    function auctionEnded() public onlyOwner{
+    function claimHighestBid() public onlyOwner{
         require(timestampAuctionCloses > block.timestamp, "Auction not closed yet");
         require(highestBid > 0, "Already got funds");
 
         //Allow owner to withdraw the highest bid
         uint amount = highestBid;
         highestBid = 0;
+
         (bool success,) = owner.call{value: amount}("");
         require(success, "Error sending funds");
     }
-
-    //Returns winner if auction closed
-    function getWinner() public view returns(address){
-        if(timestampAuctionCloses > block.timestamp){
-            return highestBidder;
-        }
-        return address(bytes20(0));
-    }
-
 
 }
