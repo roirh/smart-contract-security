@@ -13,3 +13,4 @@ Este repositorio contiene los documentos asociados al TFM "Análisis de segurida
     - Uso del patrón Check, Effects, Interact y patrón retirada (auction_withdraw.sol)
     - Resumen send(), transfer(), call() (send_ether.sol)
 - **tests**: ejemplos de test para alguno de los contratos presentados
+test
