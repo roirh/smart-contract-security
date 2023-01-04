@@ -1,4 +1,4 @@
-# Autor: Roi Rodríguez Huertas
+# Autor: roirh
 # 2022
 # Desc: Script to calculate keccak hash for BlindAuction contract
 
