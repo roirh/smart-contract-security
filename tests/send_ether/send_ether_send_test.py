@@ -25,6 +25,7 @@ def cheap_wallet(CheapWallet, accounts):
 def isolate_functions(fn_isolation):
     pass
 
+
 @given(
     amount=strategy('uint256', max_value=10**18),
     receiver=strategy('address')
@@ -49,6 +50,9 @@ def test_send_to_account(send_ether, amount,  receiver):
     else: #not enought balance, cant send tx 
         pass
 
+##test send to contract
+## send to wallet that uses more than 2300 gas should fail (expensive_wallet)
+## send to wallet that uses less than 2300 gas should be ok (cheap_wallet)
 @given(
     amount=strategy('uint256', max_value=1000**18),
     sender=strategy('address'),
