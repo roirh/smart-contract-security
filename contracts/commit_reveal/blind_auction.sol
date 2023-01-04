@@ -8,6 +8,18 @@ uint8 constant AUCTION_FINISHED = 0;
 uint8 constant AUCTION_COMMIT = 1;
 uint8 constant AUCTION_REVEAL = 2;
 
+//Use this helper contract only in internal nodes or nodes you trust
+//to avoid reveal your data
+contract BlindAuctionHelper {
+    function calculateHash(address _sender, uint256 _salt, uint256 _value) external pure returns(bytes32){
+        return keccak256(abi.encodePacked(_sender,_salt,_value));
+    }
+
+    function checkHash(bytes32 _hash, address _sender, uint256 _salt, uint256 _value) external pure returns(bool){
+        return _hash == keccak256(abi.encodePacked(_sender,_salt,_value));
+    }
+
+}
 
 contract BlindAution is Owned{
 
@@ -69,14 +81,15 @@ contract BlindAution is Owned{
 
         Participant storage p = users[msg.sender];
         require(p.commitment == _commitment, "Incorrect commitment");
-        require(_bidValue > p.commitValue, "Not enought commitment value");
+        require(_bidValue < p.commitValue, "Not enought commitment value");
 
         p.revealed = true;
         p.bidValue = _bidValue;
 
-        //user can withdraw his commitment if he is not the highest bidder
-        valueUncheckedBids -= p.commitValue;
         checkUpdateHighestBidder(_bidValue);
+        
+        //owner can no longer withdraw this commitment
+        valueUncheckedBids -= p.commitValue;
     }
 
     function getRefund() external{
@@ -87,10 +100,14 @@ contract BlindAution is Owned{
 
         //EFFECTS
         uint val = p.commitValue;
-        if(msg.sender == highestBidder){ //winner can only withdraw excess of commit value
+
+        //winner can only withdraw excess of commit value
+        if(msg.sender == highestBidder){ 
             val -= p.bidValue;  
         }
+
         //erase variables to get gas back
+        //same user cant call again this function successfully
         p.commitment = 0;
         p.commitValue = 0;
         p.revealed = false;
