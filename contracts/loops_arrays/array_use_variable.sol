@@ -15,7 +15,7 @@
  */
 
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 
 contract ArrayVariable {
@@ -23,7 +23,7 @@ contract ArrayVariable {
 uint[] dataArray;
 uint lenght = 0; //controls lenght of array
 
-function getData(uint _pos) public returns(uint){
+function getData(uint _pos) public view returns(uint){
     require(_pos < lenght);
 
     return dataArray[_pos];
