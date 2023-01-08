@@ -24,6 +24,30 @@ uint8 constant AUCTION_FINISHED = 0;
 uint8 constant AUCTION_COMMIT = 1;
 uint8 constant AUCTION_REVEAL = 2;
 
+/// Error thrown if auction is in a different state than required to perform
+/// a certain action
+/// @param required auction state
+/// @param actual auction state
+error IncorrectAuctionState( uint8 required, uint8 actual);
+
+/// Thrown if msg.value ==0
+error InvalidPayment();
+
+/// Thrown if bidValue is higher than payment made in commmit phase
+/// @param commitmentValue payment made in commit fase
+/// @param bidValue user bid value
+error NotEnoughCommitmentValue(uint commitmentValue, uint bidValue);
+
+/// Thrown if the commitment doesnt match seed and bidValue from user
+error InvalidCommitment();
+
+/// Thrown if user didn't reveal in time
+error NotRevealed();
+
+/// Thrown if user of admin already claimed their price
+error AlreadyClaimed();
+
+
 //Use this helper contract only in internal nodes or nodes you trust
 //to avoid reveal your data
 contract BlindAuctionHelper {
@@ -80,7 +104,7 @@ contract BlindAution is Owned{
     //if you make an invalid bid, you'll lose it
     function sendBidCommit(bytes32 _commitment) external payable{
         checkUpdateAuctionState(AUCTION_COMMIT);
-        require(msg.value > 0);
+        if(msg.value == 0) revert InvalidPayment();
 
         users[msg.sender] = Participant(_commitment, msg.value, false, 0);
 
@@ -96,8 +120,8 @@ contract BlindAution is Owned{
         bytes32 _commitment = keccak256(abi.encodePacked(msg.sender , _seed, _bidValue));
 
         Participant storage p = users[msg.sender];
-        require(p.commitment == _commitment, "Incorrect commitment");
-        require(_bidValue < p.commitValue, "Not enought commitment value");
+        if(p.commitment != _commitment) revert InvalidCommitment();
+        if(_bidValue > p.commitValue) revert NotEnoughCommitmentValue(p.commitValue, _bidValue);
 
         p.revealed = true;
         p.bidValue = _bidValue;
@@ -112,7 +136,7 @@ contract BlindAution is Owned{
         //CHECK
         checkUpdateAuctionState(AUCTION_FINISHED);
         Participant storage p = users[msg.sender];
-        require(p.revealed); //user didn't reveal in time
+        if(!p.revealed) revert NotRevealed(); //user didn't reveal in time
 
         //EFFECTS
         uint val = p.commitValue;
@@ -138,14 +162,14 @@ contract BlindAution is Owned{
     function claimPrice() external{
         checkUpdateHighestBidder(AUCTION_FINISHED);
         require(msg.sender == highestBidder);
-        require(priceClaimed == false);
+        if (priceClaimed) revert AlreadyClaimed();
 
         priceClaimed = true;
         //get some imaginary price
     }
 
     function withdrawWinnerBid() external onlyOwner(){
-        require(highestBid > 0 );
+        if(highestBid == 0 ) revert AlreadyClaimed();
 
         uint val = highestBid;
         highestBid =0;
@@ -170,9 +194,11 @@ contract BlindAution is Owned{
         }
     }
 
-    function checkUpdateAuctionState(uint stateRequired) internal{
+    function checkUpdateAuctionState(uint8 stateRequired) internal{
         updateAuctionState();
-        require(auctionState == stateRequired);
+        if(auctionState != stateRequired){
+            revert IncorrectAuctionState(stateRequired, auctionState);
+        }
     }
 
     function updateAuctionState() internal{
