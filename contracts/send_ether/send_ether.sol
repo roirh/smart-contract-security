@@ -44,8 +44,8 @@ contract SendEther{
     //-forwards all gas by default (configurable)
     //-unsafe to reentrancy if used improperly
     //-allows sending to contracts that spends more than 2300 gas
-    function sendViaCall(address _to, uint256 _gas) public payable{
-        (bool success,) = _to.call{value: msg.value, gas: _gas}("");
+    function sendViaCall(address _to) public payable{
+        (bool success,) = _to.call{value: msg.value}("");
         require(success, "Error using call");
     }
 

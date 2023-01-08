@@ -14,6 +14,9 @@
 # You should have received a copy of the GNU General Public License 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from brownie import accounts, reverts #type: ignore
+from brownie.test import given, strategy #type: ignore
+from hypothesis import strategies #type: ignore
 import pytest # type: ignore
 
 ## DEPLOY CONTRACTS
@@ -39,8 +42,58 @@ def isolate_functions(fn_isolation):
     pass
 
 
-def test_transfer_to_account(send_ether, accounts):
-    balance = accounts[1].balance()
-    send_ether.sendViaTransfer(accounts[1], {'from': accounts[0], 'amount': "10 ether"})
+
+@given(
+    amount=strategy('uint256', max_value=10**18),
+    receiver=strategy('address')
+)
+def test_transfer_to_account(send_ether, amount,  receiver):
+    sender = accounts[0]
+    sender_balance = sender.balance()
+    receiver_balance = receiver.balance()
+
+    #check if enough balance in sender
+    if amount <= sender_balance:
+        send_ether.sendViaTransfer(receiver, {'from': sender, 'amount': amount})
+
+        #check updated balance
+        #important! assuming gas_price=0
+        if sender != receiver:
+            assert sender_balance - amount == sender.balance()
+            assert receiver_balance + amount == receiver.balance()
+        else:
+            assert sender_balance == sender.balance() 
+
+    else: #not enought balance, cant send tx 
+        pass
+
+##test send to contract
+## send to wallet that uses more than 2300 gas should fail (expensive_wallet)
+## send to wallet that uses less than 2300 gas should be ok (cheap_wallet)
+@given(
+    amount=strategy('uint256', max_value=1000**18),
+    sender=strategy('address'),
+    use_expensive_contract_wallet = strategy('bool')
+)
+def test_transfer_to_wallet(send_ether, amount, sender, use_expensive_contract_wallet, expensive_wallet, cheap_wallet):
+    sender_balance = sender.balance()
+    receiver =  expensive_wallet if use_expensive_contract_wallet else cheap_wallet
+    receiver_balance = receiver.balance()
+
+    #check if enough balance in sender
+    if amount > sender_balance:
+        return
+
+    if use_expensive_contract_wallet:
+        with reverts(): #expensive wallet reverts
+            send_ether.sendViaTransfer(receiver.address, {'from': sender, 'amount': amount})
+
+        assert sender_balance == sender.balance()
+
+    else:
+        send_ether.sendViaTransfer(receiver.address, {'from': sender, 'amount': amount})
+        #check updated balance
+        #important! assuming gas_price=0
+        assert sender_balance - amount == sender.balance()
+        assert receiver_balance + amount == receiver.balance()
     
-    assert balance + "10 ether" == accounts[1].balance()
